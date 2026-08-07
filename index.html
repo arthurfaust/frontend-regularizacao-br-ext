@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulário Tributário</title>
+    <!-- Certifique-se de que o formStyle.css esteja na mesma pasta ou ajuste o caminho -->
+    <link rel="stylesheet" href="formStyle.css"> 
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="cabecalho">
+        <div class="cabecalho-conteudo">
+            <img src="images/logo.webp" alt="Faust Consultoria" class="logo-cabecalho">
+            <h1 class="cabecalho-titulo">Diagnóstico Tributário Preliminar - Brasileiro no Exterior</h1>
+        </div>
+    </header>
+
+    <div>
+        <!-- Recipiente para os botões de navegação -->
+        <nav class="nav-secao" id="lista-botoes-bloco-visitado"></nav>
+        
+        <div>
+            <div class="cartao">
+                <!-- O action e method saem, o JS vai assumir o controle -->
+                <form id="formulario-diagnostico">
+                    
+                    <!-- Recipiente para as seções do formulário -->
+                    <div id="form-sections"></div>
+                    
+                    <nav class="acoes-navegacao">
+                        <button type="button" id="btnVoltar" class="botao-voltar" style="display: none;">Voltar</button>
+                        <button type="submit" id="btnEnviar" class="botao-enviar" style="display: none;">Enviar Respostas</button>
+                        <button type="button" id="btnProximo" class="botao-proximo" style="display: none;">Próxima Seção</button>
+                    </nav>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="rodape">
+        <div class="limite">
+            <p>&copy; 2026 - Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Script principal -->
+    <script src="app.js"></script>
+</body>
+</html>
