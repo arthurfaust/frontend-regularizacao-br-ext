@@ -63,7 +63,7 @@ body {
 
 .logo-cabecalho {
   margin-left: 40px;
-  max-height: 48px;
+  max-height: 75px;
   width: auto;
   object-fit: contain;
 }
