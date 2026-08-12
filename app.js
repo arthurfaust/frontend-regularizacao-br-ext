@@ -1,5 +1,14 @@
 const API_URL = 'http://localhost:3000/api/formulario';
 
+// 1. FUNÇÃO DE SEGURANÇA: Prevenção contra XSS
+// Escapa caracteres sensíveis do HTML antes de renderizar os dados da API
+function escaparHTML(texto) {
+    if (typeof texto !== 'string') return texto;
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const resposta = await fetch(API_URL);
@@ -13,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Função para desenhar o HTML (Substitui o section.ejs e sectionNav.ejs)
+// 2. Função para desenhar o HTML com Validações Estritas
 function renderizarInterface(secoes) {
     const navContainer = document.getElementById('lista-botoes-bloco-visitado');
     const formContainer = document.getElementById('form-sections');
@@ -25,48 +34,71 @@ function renderizarInterface(secoes) {
         // Renderiza Navegação
         navHTML += `<button type="button" class="botao-bloco-visitado" id="botao-secao-${index + 1}">${index + 1}</button>`;
 
-        // Renderiza Seção
-        secoesHTML += `<div class="secao-container"><h2>${secao.titulo}</h2>`;
+        // Renderiza Seção com proteção XSS no título
+        secoesHTML += `<div class="secao-container"><h2>${escaparHTML(secao.titulo)}</h2>`;
         
         secao.campos.forEach(campo => {
             const isCondicional = campo.exibicaoCondicional ? true : false;
             const isObrigatorioFixo = campo.obrigatorio === true;
             const isObrigatorioCondicional = typeof campo.obrigatorio === 'string' && campo.obrigatorio.includes('Condicional');
+            
+            // Variáveis seguras
+            const safeId = escaparHTML(campo.id);
+            const safePlaceholder = escaparHTML(campo.placeholder);
 
             // Configuração da div container do campo
             let divAtributos = `class="campo-container"`;
             if (isCondicional) {
-                divAtributos += ` data-condicao-campo="${campo.exibicaoCondicional.campo}" 
-                                  data-condicao-valor="${campo.exibicaoCondicional.valor}" 
+                divAtributos += ` data-condicao-campo="${escaparHTML(campo.exibicaoCondicional.campo)}" 
+                                  data-condicao-valor="${escaparHTML(campo.exibicaoCondicional.valor)}" 
                                   data-condicao-obrigatorio="${isObrigatorioCondicional}" 
                                   style="display: none;"`;
             }
 
             secoesHTML += `<div ${divAtributos}>
-                <label for="${campo.id}">${campo.placeholder}
+                <label for="${safeId}">${safePlaceholder}
                     ${isObrigatorioFixo ? '<span class="obrigatorio">*</span>' : ''}
                     ${isObrigatorioCondicional ? '<span class="obrigatorio condicional-asterisco" style="display: none;">*</span>' : ''}
                 </label>`;
 
-            // Renderiza o input dependendo do tipo
+            // Renderiza o input dependendo do tipo com VALIDAÇÕES EXTRAS
             if (['texto', 'email', 'tel', 'ano'].includes(campo.type)) {
                 let inputType = (campo.type === 'texto' || campo.type === 'ano') ? 'text' : campo.type;
-                secoesHTML += `<input type="${inputType}" id="${campo.id}" name="${campo.id}" placeholder="${campo.placeholder}" data-tipo="${campo.type}" ${isObrigatorioFixo ? 'required' : ''}>`;
+                let atributosExtras = '';
+
+                // Validação estrita baseada no tipo
+                if (campo.type === 'email') {
+                    inputType = 'email';
+                    atributosExtras = 'maxlength="254"'; 
+                } else if (campo.type === 'tel') {
+                    inputType = 'tel';
+                    atributosExtras = 'pattern="[0-9\\s\\-\\(\\)\\+]+" maxlength="20" title="Digite um telefone válido"';
+                } else if (campo.type === 'ano') {
+                    atributosExtras = 'pattern="[0-9]{4}" maxlength="4" title="Digite um ano válido com 4 dígitos numéricos"';
+                } else if (campo.type === 'texto') {
+                    atributosExtras = 'maxlength="500"';
+                }
+
+                secoesHTML += `<input type="${inputType}" id="${safeId}" name="${safeId}" placeholder="${safePlaceholder}" data-tipo="${campo.type}" ${isObrigatorioFixo ? 'required' : ''} ${atributosExtras}>`;
+                
             } else if (campo.type === 'selecao') {
-                secoesHTML += `<select id="${campo.id}" name="${campo.id}" ${isObrigatorioFixo ? 'required' : ''}>
+                secoesHTML += `<select id="${safeId}" name="${safeId}" ${isObrigatorioFixo ? 'required' : ''}>
                     <option value="" disabled selected>Selecione uma opção</option>
-                    ${campo.opcoes.map(opcao => `<option value="${opcao}">${opcao}</option>`).join('')}
+                    ${campo.opcoes.map(opcao => `<option value="${escaparHTML(opcao)}">${escaparHTML(opcao)}</option>`).join('')}
                 </select>`;
+                
             } else if (campo.type === 'multipla_escolha') {
                 secoesHTML += `<div class="opcoes-multiplas">
                     ${campo.categorias.map(cat => `
                         <label class="checkbox-label">
-                            <input type="checkbox" name="${campo.id}[]" value="${cat}"> ${cat}
+                            <input type="checkbox" name="${safeId}[]" value="${escaparHTML(cat)}"> ${escaparHTML(cat)}
                         </label>
                     `).join('')}
                 </div>`;
+                
             } else if (campo.type === 'area_texto') {
-                secoesHTML += `<textarea id="${campo.id}" name="${campo.id}" placeholder="${campo.placeholder}" rows="4" ${isObrigatorioFixo ? 'required' : ''}></textarea>`;
+                // Adicionado maxlength="2000" para evitar ataques de payload massivo em textareas
+                secoesHTML += `<textarea id="${safeId}" name="${safeId}" placeholder="${safePlaceholder}" rows="4" maxlength="2000" ${isObrigatorioFixo ? 'required' : ''}></textarea>`;
             }
             
             secoesHTML += `</div>`;
@@ -100,7 +132,6 @@ function inicializarComportamentos(secoesData) {
     const totalEtapas = secoes.length;
     const etapasConcluidas = new Set();
 
-    // Reutiliza sua função de resumo exata do arquivo original
     function gerarResumo() {
         const containerResumo = document.getElementById('conteudo-resumo');
         if (!containerResumo) return;
@@ -110,7 +141,7 @@ function inicializarComportamentos(secoesData) {
             const secao = secoes[i];
             const tituloSecao = secao.querySelector('h2').textContent;
             const divSecaoResumo = document.createElement('div');
-            divSecaoResumo.innerHTML = `<h3 class="titulo-secao-resumo">${tituloSecao}</h3>`;
+            divSecaoResumo.innerHTML = `<h3 class="titulo-secao-resumo">${escaparHTML(tituloSecao)}</h3>`;
             
             let temRespostaValida = false;
             secao.querySelectorAll('.campo-container').forEach(campo => {
@@ -130,11 +161,22 @@ function inicializarComportamentos(secoesData) {
                     }
                 }
             
-                if (!valorResposta) valorResposta = '<span style="color: var(--cinza-500); font-style: italic;">Não respondido</span>';
-            
+                // Usa textContent ao invés de innerHTML para setar o valor no resumo (Segurança extra contra XSS via input do usuário)
                 const itemResumo = document.createElement('div');
                 itemResumo.className = 'item-resumo';
-                itemResumo.innerHTML = `<strong>${labelText}</strong> <span>${valorResposta}</span>`;
+                
+                const labelSpan = document.createElement('strong');
+                labelSpan.textContent = labelText;
+                itemResumo.appendChild(labelSpan);
+
+                const valorSpan = document.createElement('span');
+                if (!valorResposta) {
+                    valorSpan.innerHTML = '<span style="color: var(--cinza-500); font-style: italic;">Não respondido</span>';
+                } else {
+                    valorSpan.textContent = valorResposta; 
+                }
+                itemResumo.appendChild(valorSpan);
+
                 divSecaoResumo.appendChild(itemResumo);
                 temRespostaValida = true;
             });
@@ -142,7 +184,6 @@ function inicializarComportamentos(secoesData) {
         }
     }
 
-    // Reutiliza sua função de regras condicionais
     function verificarCondicionais() {
         document.querySelectorAll('.campo-container[data-condicao-campo]').forEach(container => {
             const campoAlvoId = container.getAttribute('data-condicao-campo');
@@ -165,6 +206,9 @@ function inicializarComportamentos(secoesData) {
                     container.style.display = 'none';
                     if (asterisco) asterisco.style.display = 'none';
                     if (inputElement) inputElement.required = false;
+                    
+                    // Limpa o valor do campo se ele for oculto para não enviar dados fantasmas
+                    if(inputElement) inputElement.value = '';
                 }
             }
         });
@@ -233,31 +277,34 @@ function inicializarComportamentos(secoesData) {
 
     // 4. ENVIO DE DADOS PARA A API (POST)
     formulario.addEventListener('submit', async (evento) => {
-        evento.preventDefault(); // Impede o comportamento padrão de recarregar a página
+        evento.preventDefault(); 
         
-        // Pega todos os dados do form
         const formData = new FormData(formulario);
-        
-        // Converte os dados para um objeto JSON (lidando com arrays de checkbox)
         const formObj = {};
+        
+        // Sanitização: Remoção de espaços extras (trim) no momento da extração
         for (let [key, value] of formData.entries()) {
+            const valorLimpo = typeof value === 'string' ? value.trim() : value;
+            
             if (key.endsWith('[]')) {
                 const cleanKey = key.slice(0, -2);
                 if (!formObj[cleanKey]) formObj[cleanKey] = [];
-                formObj[cleanKey].push(value);
+                formObj[cleanKey].push(valorLimpo);
             } else {
-                formObj[key] = value;
+                formObj[key] = valorLimpo;
             }
         }
 
         try {
-            // Desabilita o botão para evitar duplos cliques
             btnEnviar.disabled = true;
             btnEnviar.textContent = "Enviando...";
 
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json'
+                    // 'X-CSRF-Token': 'seu-token-aqui' // <-- Descomente e ajuste se a sua API exigir validação de token CSRF
+                },
                 body: JSON.stringify(formObj)
             });
 
