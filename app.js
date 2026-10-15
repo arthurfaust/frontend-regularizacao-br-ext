@@ -1,5 +1,8 @@
 const API_URL = 'http://localhost:3000/api/formulario';
 
+// AJUSTE: limites usados quando o perguntas.json não define "limiteCaracteres" para o campo
+const LIMITE_PADRAO = { texto: 500, area_texto: 2000 };
+
 // 1. FUNÇÃO DE SEGURANÇA: Prevenção contra XSS
 // Escapa caracteres sensíveis do HTML antes de renderizar os dados da API
 function escaparHTML(texto) {
@@ -12,6 +15,8 @@ function escaparHTML(texto) {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const resposta = await fetch(API_URL);
+        // AJUSTE: verifica o status HTTP antes de tentar ler o JSON
+        if (!resposta.ok) throw new Error(`A API respondeu com status ${resposta.status}`);
         const dados = await resposta.json();
 
         renderizarInterface(dados.secoes);
@@ -46,6 +51,9 @@ function renderizarInterface(secoes) {
             const safeId = escaparHTML(campo.id);
             const safePlaceholder = escaparHTML(campo.placeholder);
 
+            // AJUSTE: o limite de caracteres vem do perguntas.json (mesmo valor validado no backend)
+            const limite = Number(campo.limiteCaracteres) || LIMITE_PADRAO[campo.type];
+
             // Configuração da div container do campo
             let divAtributos = `class="campo-container"`;
             if (isCondicional) {
@@ -74,9 +82,9 @@ function renderizarInterface(secoes) {
                     inputType = 'tel';
                     atributosExtras = 'pattern="[0-9\\s\\-\\(\\)\\+]+" maxlength="20" title="Digite um telefone válido"';
                 } else if (campo.type === 'ano') {
-                    atributosExtras = 'pattern="[0-9]{4}" maxlength="4" title="Digite um ano válido com 4 dígitos numéricos"';
+                    atributosExtras = 'pattern="[0-9]{4}" maxlength="4" inputmode="numeric" title="Digite um ano válido com 4 dígitos numéricos"';
                 } else if (campo.type === 'texto') {
-                    atributosExtras = 'maxlength="500"';
+                    atributosExtras = `maxlength="${limite}"`;
                 }
 
                 secoesHTML += `<input type="${inputType}" id="${safeId}" name="${safeId}" placeholder="${safePlaceholder}" data-tipo="${campo.type}" ${isObrigatorioFixo ? 'required' : ''} ${atributosExtras}>`;
@@ -97,8 +105,7 @@ function renderizarInterface(secoes) {
                 </div>`;
                 
             } else if (campo.type === 'area_texto') {
-                // Adicionado maxlength="2000" para evitar ataques de payload massivo em textareas
-                secoesHTML += `<textarea id="${safeId}" name="${safeId}" placeholder="${safePlaceholder}" rows="4" maxlength="2000" ${isObrigatorioFixo ? 'required' : ''}></textarea>`;
+                secoesHTML += `<textarea id="${safeId}" name="${safeId}" placeholder="${safePlaceholder}" rows="4" maxlength="${limite}" ${isObrigatorioFixo ? 'required' : ''}></textarea>`;
             }
             
             secoesHTML += `</div>`;
@@ -127,10 +134,27 @@ function inicializarComportamentos(secoesData) {
     const secoes = document.querySelectorAll('.secao-container');
     const botoesBloco = document.querySelectorAll('.botao-bloco-visitado');
     const formulario = document.getElementById('formulario-diagnostico');
+    const aviso = document.getElementById('aviso-formulario');
+    const campoWhatsapp = document.getElementById('whatsapp');
+    const campoEmail = document.getElementById('email');
 
     let etapaAtual = 0;
+    let enviado = false;
     const totalEtapas = secoes.length;
     const etapasConcluidas = new Set();
+
+    // AJUSTE: mensagens exibidas na própria página, no lugar dos alerts
+    function mostrarAviso(mensagem, tipo) {
+        aviso.textContent = mensagem;
+        aviso.className = `aviso aviso-${tipo}`;
+        aviso.hidden = false;
+        aviso.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function esconderAviso() {
+        aviso.hidden = true;
+        aviso.textContent = '';
+    }
 
     function gerarResumo() {
         const containerResumo = document.getElementById('conteudo-resumo');
@@ -209,12 +233,87 @@ function inicializarComportamentos(secoesData) {
                     
                     // Limpa o valor do campo se ele for oculto para não enviar dados fantasmas
                     if(inputElement) inputElement.value = '';
+                    // AJUSTE: desmarca também os checkboxes de grupos ocultos (ex.: categorias de renda)
+                    container.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
                 }
             }
         });
     }
 
     formulario.addEventListener('change', verificarCondicionais);
+
+    // AJUSTE: valida no navegador as mesmas regras de contato do backend
+    function validarContato() {
+        if (!campoWhatsapp || !campoEmail) return;
+
+        const digitos = campoWhatsapp.value.replace(/\D/g, '');
+        const whatsappInvalido = campoWhatsapp.value.trim() !== '' && (digitos.length < 10 || digitos.length > 15);
+        campoWhatsapp.setCustomValidity(whatsappInvalido ? 'Informe um WhatsApp válido, com DDD (entre 10 e 15 dígitos).' : '');
+
+        const semContato = !campoWhatsapp.value.trim() && !campoEmail.value.trim();
+        campoEmail.setCustomValidity(semContato ? 'Informe pelo menos WhatsApp ou E-mail.' : '');
+    }
+
+    if (campoWhatsapp) campoWhatsapp.addEventListener('input', validarContato);
+    if (campoEmail) campoEmail.addEventListener('input', validarContato);
+
+    // AJUSTE: exibição dos erros de validação devolvidos pelo backend, embaixo de cada campo
+    function limparErroCampo(container) {
+        container.classList.remove('campo-com-erro');
+        const mensagem = container.querySelector('.mensagem-erro');
+        if (mensagem) mensagem.remove();
+    }
+
+    function limparErros() {
+        document.querySelectorAll('.campo-com-erro').forEach(limparErroCampo);
+    }
+
+    // O erro de um campo some assim que o usuário mexe nele
+    formulario.addEventListener('input', (evento) => {
+        const container = evento.target.closest('.campo-container');
+        if (container) limparErroCampo(container);
+    });
+
+    // Junta as mensagens de um nó do z.treeifyError (inclui itens de listas, como as categorias)
+    function coletarMensagens(no) {
+        if (!no) return [];
+        const mensagens = [...(no.errors || [])];
+        (no.items || []).forEach(item => mensagens.push(...coletarMensagens(item)));
+        Object.values(no.properties || {}).forEach(prop => mensagens.push(...coletarMensagens(prop)));
+        return mensagens;
+    }
+
+    function mostrarErrosDoServidor(detalhes) {
+        limparErros();
+        const semCampo = [...(detalhes?.errors || [])];
+        let primeiraSecao = null;
+
+        for (const [campoId, no] of Object.entries(detalhes?.properties || {})) {
+            const mensagens = [...new Set(coletarMensagens(no))];
+            if (!mensagens.length) continue;
+
+            const elemento = document.getElementById(campoId)
+                || Array.from(formulario.elements).find(el => el.name === `${campoId}[]`);
+            const container = elemento ? elemento.closest('.campo-container') : null;
+
+            // Campo inexistente ou oculto: a mensagem vai para o aviso geral
+            if (!container || container.style.display === 'none') {
+                semCampo.push(...mensagens);
+                continue;
+            }
+
+            container.classList.add('campo-com-erro');
+            const mensagemErro = document.createElement('small');
+            mensagemErro.className = 'mensagem-erro';
+            mensagemErro.textContent = mensagens.join(' ');
+            container.appendChild(mensagemErro);
+
+            const indiceSecao = Array.from(secoes).indexOf(container.closest('.secao-container'));
+            if (primeiraSecao === null || indiceSecao < primeiraSecao) primeiraSecao = indiceSecao;
+        }
+
+        return { primeiraSecao, semCampo };
+    }
 
     function validarSecao(secIndex, reportar = false) {
         if(!secoes[secIndex]) return true;
@@ -278,6 +377,18 @@ function inicializarComportamentos(secoesData) {
     // 4. ENVIO DE DADOS PARA A API (POST)
     formulario.addEventListener('submit', async (evento) => {
         evento.preventDefault(); 
+
+        // AJUSTE: Enter num campo antes do resumo avança a seção em vez de enviar o formulário
+        if (etapaAtual !== totalEtapas - 1) {
+            btnProximo.click();
+            return;
+        }
+
+        // AJUSTE: impede reenvio depois de um envio bem-sucedido
+        if (enviado) return;
+
+        esconderAviso();
+        limparErros();
         
         const formData = new FormData(formulario);
         const formObj = {};
@@ -295,6 +406,12 @@ function inicializarComportamentos(secoesData) {
             }
         }
 
+        // AJUSTE: envia o WhatsApp só com dígitos (e o + inicial), formato exigido pelo backend
+        if (formObj.whatsapp) {
+            const digitos = formObj.whatsapp.replace(/\D/g, '');
+            formObj.whatsapp = formObj.whatsapp.startsWith('+') ? `+${digitos}` : digitos;
+        }
+
         try {
             btnEnviar.disabled = true;
             btnEnviar.textContent = "Enviando...";
@@ -303,28 +420,48 @@ function inicializarComportamentos(secoesData) {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
-                    // 'X-CSRF-Token': 'seu-token-aqui' // <-- Descomente e ajuste se a sua API exigir validação de token CSRF
                 },
                 body: JSON.stringify(formObj)
             });
 
-            const data = await response.json();
+            // AJUSTE: tolera respostas que não sejam JSON (ex.: erro de proxy)
+            const data = await response.json().catch(() => ({}));
 
             if (response.ok) {
-                alert('Sucesso: ' + data.mensagem);
-                // Aqui você pode redirecionar para uma página de sucesso
+                enviado = true;
+                btnEnviar.textContent = "Enviado";
+                mostrarAviso(data.mensagem || 'Respostas enviadas com sucesso!', 'sucesso');
+
+            } else if (response.status === 400 && data.detalhes) {
+                const { primeiraSecao, semCampo } = mostrarErrosDoServidor(data.detalhes);
+                if (primeiraSecao !== null) {
+                    etapaAtual = primeiraSecao;
+                    renderizar();
+                }
+                const partes = [];
+                if (primeiraSecao !== null) partes.push('Alguns campos precisam de correção. Confira as mensagens destacadas em vermelho.');
+                partes.push(...semCampo);
+                mostrarAviso(partes.length ? partes.join(' ') : (data.mensagem || 'Erro de validação nos dados enviados.'), 'erro');
+
+            } else if (response.status >= 500) {
+                // Erros internos podem ter mensagens técnicas; o usuário recebe uma mensagem genérica
+                mostrarAviso('Não foi possível processar o envio agora. Tente novamente em alguns minutos.', 'erro');
+
             } else {
-                alert('Erro ao enviar: ' + data.mensagem);
+                mostrarAviso(data.mensagem || `Não foi possível enviar (erro ${response.status}).`, 'erro');
             }
         } catch (erro) {
             console.error(erro);
-            alert('Erro de conexão ao enviar o formulário.');
+            mostrarAviso('Erro de conexão ao enviar o formulário. Verifique sua internet e tente novamente.', 'erro');
         } finally {
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = "Enviar Respostas";
+            if (!enviado) {
+                btnEnviar.disabled = false;
+                btnEnviar.textContent = "Enviar Respostas";
+            }
         }
     });
 
     verificarCondicionais();
+    validarContato();
     renderizar();
 }

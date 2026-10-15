@@ -338,3 +338,84 @@ select:not(:has(option[value=""]:checked)) {
   font-size: 1rem;
   word-break: break-word;
 }
+
+/* Avisos de envio (sucesso ou erro) */
+.aviso {
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  border-radius: var(--raio-input);
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+.aviso[hidden] {
+  display: none;
+}
+
+.aviso-sucesso {
+  color: var(--verde-800);
+  background-color: var(--verde-50);
+  border-color: var(--verde-700);
+}
+
+.aviso-erro {
+  color: #8a1c27;
+  background-color: #fdf0f1;
+  border-color: var(--vermelho-500);
+}
+
+/* Campo recusado pelo backend.
+   O !important é necessário porque a regra de "campo preenchido" (verde) é mais específica. */
+.campo-com-erro input:not([type="checkbox"]),
+.campo-com-erro select,
+.campo-com-erro textarea {
+  border-color: var(--vermelho-500) !important;
+  background-color: #fdf0f1 !important;
+}
+
+.mensagem-erro {
+  color: var(--vermelho-500);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.botao-enviar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Telas pequenas (celular) */
+@media (max-width: 640px) {
+  .cabecalho-conteudo {
+    gap: 16px;
+    padding-inline: 16px;
+  }
+
+  .logo-cabecalho {
+    margin-left: 0;
+    max-height: 48px;
+  }
+
+  .cabecalho-titulo {
+    font-size: 1rem;
+  }
+
+  .cartao {
+    padding: 20px 16px;
+    margin: 12px;
+  }
+
+  .botao-bloco-visitado {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+
+  .secao-container h2 {
+    font-size: 1.2rem;
+  }
+
+  .acoes-navegacao {
+    gap: 12px;
+  }
+}
