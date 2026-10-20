@@ -45,7 +45,8 @@ function renderizarInterface(secoes) {
         secao.campos.forEach(campo => {
             const isCondicional = campo.exibicaoCondicional ? true : false;
             const isObrigatorioFixo = campo.obrigatorio === true;
-            const isObrigatorioCondicional = typeof campo.obrigatorio === 'string' && campo.obrigatorio.includes('Condicional');
+            // AJUSTE: só é obrigatório quando a regra diz "obrigatório"; "Condicional (aparece se ...)" só controla a exibição
+            const isObrigatorioCondicional = typeof campo.obrigatorio === 'string' && /obrigat[óo]rio/i.test(campo.obrigatorio);
             
             // Variáveis seguras
             const safeId = escaparHTML(campo.id);
