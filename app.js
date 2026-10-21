@@ -430,7 +430,9 @@ function inicializarComportamentos(secoesData) {
 
             if (response.ok) {
                 enviado = true;
-                btnEnviar.textContent = "Enviado";
+                // Depois do envio, esconde o formulário (com o resumo) e a navegação; fica só a mensagem
+                formulario.style.display = 'none';
+                document.getElementById('lista-botoes-bloco-visitado').style.display = 'none';
                 mostrarAviso(data.mensagem || 'Respostas enviadas com sucesso!', 'sucesso');
 
             } else if (response.status === 400 && data.detalhes) {
