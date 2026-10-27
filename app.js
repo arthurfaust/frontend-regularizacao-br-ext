@@ -64,8 +64,11 @@ function renderizarInterface(secoes) {
                                   style="display: none;"`;
             }
 
+            // Grupo de opções não tem um único campo para o "for"; o rótulo identifica o grupo pelo id
+            const atributoRotulo = campo.type === 'selecao' ? `id="rotulo-${safeId}"` : `for="${safeId}"`;
+
             secoesHTML += `<div ${divAtributos}>
-                <label for="${safeId}">${safePlaceholder}
+                <label ${atributoRotulo}>${safePlaceholder}
                     ${isObrigatorioFixo ? '<span class="obrigatorio">*</span>' : ''}
                     ${isObrigatorioCondicional ? '<span class="obrigatorio condicional-asterisco" style="display: none;">*</span>' : ''}
                 </label>`;
@@ -91,10 +94,17 @@ function renderizarInterface(secoes) {
                 secoesHTML += `<input type="${inputType}" id="${safeId}" name="${safeId}" placeholder="${safePlaceholder}" data-tipo="${campo.type}" ${isObrigatorioFixo ? 'required' : ''} ${atributosExtras}>`;
                 
             } else if (campo.type === 'selecao') {
-                secoesHTML += `<select id="${safeId}" name="${safeId}" ${isObrigatorioFixo ? 'required' : ''}>
-                    <option value="" disabled selected>Selecione uma opção</option>
-                    ${campo.opcoes.map(opcao => `<option value="${escaparHTML(opcao)}">${escaparHTML(opcao)}</option>`).join('')}
-                </select>`;
+                // Botões de opção (todas visíveis) no lugar do select: a lista suspensa nativa
+                // pode ser desenhada cortada em alguns navegadores. O "value" do JSON vem pré-marcado.
+                secoesHTML += `<div class="opcoes-radio" id="${safeId}" role="radiogroup" aria-labelledby="rotulo-${safeId}">
+                    ${campo.opcoes.map(opcao => `
+                        <label class="opcao-radio">
+                            <input type="radio" name="${safeId}" value="${escaparHTML(opcao)}"
+                                ${isObrigatorioFixo ? 'required' : ''} ${opcao === campo.value ? 'checked' : ''}>
+                            <span>${escaparHTML(opcao)}</span>
+                        </label>
+                    `).join('')}
+                </div>`;
                 
             } else if (campo.type === 'multipla_escolha') {
                 secoesHTML += `<div class="opcoes-multiplas">
@@ -157,6 +167,17 @@ function inicializarComportamentos(secoesData) {
         aviso.textContent = '';
     }
 
+    // Seletor dos campos de valor único digitado (exclui checkboxes e botões de opção)
+    const SELETOR_CAMPO_TEXTO = 'input:not([type="checkbox"]):not([type="radio"]), textarea';
+
+    // Valor de um campo pelo id: a opção marcada (botões de opção) ou o texto digitado
+    function valorDoCampo(campoId) {
+        const marcada = formulario.querySelector(`input[type="radio"][name="${CSS.escape(campoId)}"]:checked`);
+        if (marcada) return marcada.value;
+        const elemento = document.getElementById(campoId);
+        return elemento && 'value' in elemento ? elemento.value : '';
+    }
+
     function gerarResumo() {
         const containerResumo = document.getElementById('conteudo-resumo');
         if (!containerResumo) return;
@@ -175,10 +196,13 @@ function inicializarComportamentos(secoesData) {
                 const labelElement = campo.querySelector('label');
                 let labelText = labelElement ? labelElement.textContent.replace('*', '').trim() : 'Pergunta';
                 let valorResposta = '';
-                const inputElement = campo.querySelector('input:not([type="checkbox"]), select, textarea');
-                
+                const inputElement = campo.querySelector(SELETOR_CAMPO_TEXTO);
+                const opcaoMarcada = campo.querySelector('input[type="radio"]:checked');
+
                 if (inputElement) {
                     valorResposta = inputElement.value.trim();
+                } else if (opcaoMarcada) {
+                    valorResposta = opcaoMarcada.value;
                 } else {
                     const checkboxes = campo.querySelectorAll('input[type="checkbox"]:checked');
                     if (checkboxes.length > 0) {
@@ -215,27 +239,30 @@ function inicializarComportamentos(secoesData) {
             const valorEsperado = container.getAttribute('data-condicao-valor');
             const precisaSerObrigatorio = container.getAttribute('data-condicao-obrigatorio') === 'true';
             const elementoAlvo = document.getElementById(campoAlvoId);
-        
+
             if (elementoAlvo) {
-                const valorAtual = elementoAlvo.value;
-                const inputElement = container.querySelector('input:not([type="checkbox"]), select, textarea');
+                const valorAtual = valorDoCampo(campoAlvoId);
+                const inputElement = container.querySelector(SELETOR_CAMPO_TEXTO);
+                const botoesOpcao = container.querySelectorAll('input[type="radio"]');
                 const asterisco = container.querySelector('.condicional-asterisco');
-            
+
                 if (valorAtual === valorEsperado) {
                     container.style.display = 'flex';
                     if (precisaSerObrigatorio) {
                         if (asterisco) asterisco.style.display = 'inline';
                         if (inputElement) inputElement.required = true;
+                        botoesOpcao.forEach(botao => { botao.required = true; });
                     }
                 } else {
                     container.style.display = 'none';
                     if (asterisco) asterisco.style.display = 'none';
                     if (inputElement) inputElement.required = false;
-                    
+                    botoesOpcao.forEach(botao => { botao.required = false; });
+
                     // Limpa o valor do campo se ele for oculto para não enviar dados fantasmas
                     if(inputElement) inputElement.value = '';
-                    // AJUSTE: desmarca também os checkboxes de grupos ocultos (ex.: categorias de renda)
-                    container.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+                    // AJUSTE: desmarca também os checkboxes e botões de opção de campos ocultos
+                    container.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(cb => { cb.checked = false; });
                 }
             }
         });
@@ -321,8 +348,9 @@ function inicializarComportamentos(secoesData) {
         let valida = true;
         secoes[secIndex].querySelectorAll('input, select, textarea').forEach(campo => {
             if (!campo.checkValidity()) {
+                // Mostra a mensagem só do primeiro campo inválido (num grupo de opções, todos os botões ficam inválidos)
+                if (reportar && valida) campo.reportValidity();
                 valida = false;
-                if(reportar) campo.reportValidity();
             }
         });
         return valida;

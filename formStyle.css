@@ -164,8 +164,8 @@ body {
   font-weight: bold;
 }
 
-/* Campos Padrão (Texto, Select, Textarea) - Exclui os Checkboxes */
-input:not([type="checkbox"]), select, textarea {
+/* Campos Padrão (Texto, Textarea) - Exclui os Checkboxes */
+input:not([type="checkbox"]):not([type="radio"]), textarea {
   width: 100%;
   min-height: 48px;
   padding: 12px 16px;
@@ -183,31 +183,72 @@ textarea {
   resize: vertical;
 }
 
-select {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23275f7d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 16px center;
-  padding-right: 44px;
-}
-
-input:not([type="checkbox"]):hover, select:hover, textarea:hover {
+input:not([type="checkbox"]):not([type="radio"]):hover, textarea:hover {
   border-color: var(--azul-700);
 }
 
-input:not([type="checkbox"]):focus, select:focus, textarea:focus {
+input:not([type="checkbox"]):not([type="radio"]):focus, textarea:focus {
   outline: none;
   border-color: var(--azul-700);
   box-shadow: 0 0 0 3px rgba(39, 95, 125, 0.18);
 }
 
-/* Estado visual para inputs/selects/textareas preenchidos */
-input:not([type="checkbox"]):not(:placeholder-shown),
-textarea:not(:placeholder-shown),
-select:not(:has(option[value=""]:checked)) {
+/* Estado visual para inputs/textareas preenchidos */
+input:not([type="checkbox"]):not([type="radio"]):not(:placeholder-shown),
+textarea:not(:placeholder-shown) {
   background-color: var(--verde-50);
   border-color: var(--verde-700);
+}
+
+/* Botões de opção (perguntas de seleção única): todas as opções visíveis, lado a lado */
+.opcoes-radio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.campo-container .opcao-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 16px;
+  color: var(--cinza-900);
+  background-color: var(--branco);
+  border: 1px solid var(--cinza-300);
+  border-radius: var(--raio-input);
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.opcao-radio:hover {
+  border-color: var(--azul-700);
+}
+
+.opcao-radio input[type="radio"] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--verde-700);
+  cursor: pointer;
+}
+
+.opcao-radio:has(input:checked) {
+  background-color: var(--verde-50);
+  border-color: var(--verde-700);
+  color: var(--verde-800);
+}
+
+.opcao-radio:has(input:focus-visible) {
+  border-color: var(--azul-700);
+  box-shadow: 0 0 0 3px rgba(39, 95, 125, 0.18);
+}
+
+.campo-com-erro .opcao-radio {
+  border-color: var(--vermelho-500);
 }
 
 /* Estilo Exclusivo para Checkboxes (Múltipla escolha) */
@@ -366,8 +407,7 @@ select:not(:has(option[value=""]:checked)) {
 
 /* Campo recusado pelo backend.
    O !important é necessário porque a regra de "campo preenchido" (verde) é mais específica. */
-.campo-com-erro input:not([type="checkbox"]),
-.campo-com-erro select,
+.campo-com-erro input:not([type="checkbox"]):not([type="radio"]),
 .campo-com-erro textarea {
   border-color: var(--vermelho-500) !important;
   background-color: #fdf0f1 !important;
@@ -386,6 +426,11 @@ select:not(:has(option[value=""]:checked)) {
 
 /* Telas pequenas (celular) */
 @media (max-width: 640px) {
+  /* Opções uma embaixo da outra, com a largura toda */
+  .opcoes-radio {
+    flex-direction: column;
+  }
+
   .cabecalho-conteudo {
     gap: 16px;
     padding-inline: 16px;
