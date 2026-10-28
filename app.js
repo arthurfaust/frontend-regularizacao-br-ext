@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:3000/api/formulario';
+// Em ambiente local usa a API da própria máquina; publicado, usa a API na Fly.io
+const API_URL = ['127.0.0.1', 'localhost'].includes(location.hostname)
+    ? 'http://localhost:3000/api/formulario'
+    : 'https://faust-diagnostico-api.fly.dev/api/formulario';
 
 // AJUSTE: limites usados quando o perguntas.json não define "limiteCaracteres" para o campo
 const LIMITE_PADRAO = { texto: 500, area_texto: 2000 };
