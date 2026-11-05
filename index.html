@@ -22,6 +22,17 @@
         
         <div>
             <div class="cartao">
+                <!-- Introdução: aparece só na primeira etapa (o app.js esconde nas demais) -->
+                <section class="intro-diagnostico">
+                    <h2>Seu diagnóstico tributário de brasileiro no exterior</h2>
+                    <p>Responda algumas perguntas sobre a sua situação com a Receita Federal. Com elas, a Guisela Faust, consultora tributária, prepara a análise do seu caso e apresenta o resultado numa conversa de 20 minutos com você.</p>
+                    <ul>
+                        <li>Leva cerca de 3 minutos</li>
+                        <li>Se não souber alguma resposta, é só marcar “Não sei informar”</li>
+                        <li>Suas informações são confidenciais e usadas só para analisar o seu caso</li>
+                    </ul>
+                </section>
+
                 <!-- Avisos de envio (sucesso ou erro), preenchidos pelo app.js -->
                 <div id="aviso-formulario" class="aviso" role="alert" hidden></div>
 
@@ -37,6 +48,30 @@
                         <button type="button" id="btnProximo" class="botao-proximo" style="display: none;">Próxima Seção</button>
                     </nav>
                 </form>
+
+                <!-- Aviso de privacidade (LGPD): o app.js esconde depois do envio -->
+                <div class="nota-privacidade">
+                    <p>Ao enviar, você autoriza a Faust Consultoria a usar estas informações para analisar o seu caso e entrar em contato com você.</p>
+                    <details>
+                        <summary>Aviso de privacidade</summary>
+                        <dl>
+                            <dt>Quem cuida dos seus dados</dt>
+                            <dd>Faust Soluções Tributárias Ltda., CNPJ 27.436.232/0001-43.</dd>
+                            <dt>Para que usamos</dt>
+                            <dd>Para analisar a sua situação tributária e entrar em contato para apresentar o diagnóstico. Não vendemos seus dados nem os usamos para outra finalidade.</dd>
+                            <dt>Com quem compartilhamos</dt>
+                            <dd>Só com os serviços de tecnologia que fazem este atendimento funcionar: hospedagem do site e do sistema (Cloudflare e Fly.io), e-mail (Microsoft 365) e um serviço de inteligência artificial (OpenAI) que apoia a preparação da análise. A inteligência artificial recebe só as respostas sobre a sua situação, sem o seu nome nem os seus contatos. Alguns desses serviços ficam fora do Brasil.</dd>
+                            <dt>Sigilo</dt>
+                            <dd>As informações são tratadas com o sigilo profissional da atividade contábil.</dd>
+                            <dt>Por quanto tempo guardamos</dt>
+                            <dd>Enquanto durar o atendimento. Se não houver contratação, por até 12 meses, e depois os dados são apagados.</dd>
+                            <dt>Seus direitos</dt>
+                            <dd>Você pode pedir acesso, correção ou exclusão dos seus dados a qualquer momento pelo e-mail <a href="mailto:guisela@faustconsultoria.com.br">guisela@faustconsultoria.com.br</a>.</dd>
+                            <dt>Medição de anúncios</dt>
+                            <dd>Esta página usa a ferramenta de medição da Meta para saber quais anúncios trouxeram você até aqui. Suas respostas ao formulário não são enviadas para a Meta.</dd>
+                        </dl>
+                    </details>
+                </div>
             </div>
         </div>
     </div>

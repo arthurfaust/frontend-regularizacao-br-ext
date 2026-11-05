@@ -360,6 +360,10 @@ function inicializarComportamentos(secoesData) {
     }
 
     function renderizar() {
+        // A introdução só aparece na primeira etapa
+        const intro = document.querySelector('.intro-diagnostico');
+        if (intro) intro.hidden = etapaAtual !== 0 || enviado;
+
         etapasConcluidas.forEach(index => {
             if (!validarSecao(index, false)) etapasConcluidas.delete(index);
         });
@@ -464,6 +468,10 @@ function inicializarComportamentos(secoesData) {
                 // Depois do envio, esconde o formulário (com o resumo) e a navegação; fica só a mensagem
                 formulario.style.display = 'none';
                 document.getElementById('lista-botoes-bloco-visitado').style.display = 'none';
+                const notaPrivacidade = document.querySelector('.nota-privacidade');
+                if (notaPrivacidade) notaPrivacidade.hidden = true;
+                // Conversão para a Meta (só o evento, sem nenhuma resposta do formulário)
+                if (window.fbq) window.fbq('track', 'Lead');
                 mostrarAviso(data.mensagem || 'Respostas enviadas com sucesso!', 'sucesso');
 
             } else if (response.status === 400 && data.detalhes) {
