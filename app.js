@@ -150,7 +150,6 @@ function inicializarComportamentos(secoesData) {
     const formulario = document.getElementById('formulario-diagnostico');
     const aviso = document.getElementById('aviso-formulario');
     const campoWhatsapp = document.getElementById('whatsapp');
-    const campoEmail = document.getElementById('email');
 
     let etapaAtual = 0;
     let enviado = false;
@@ -274,19 +273,16 @@ function inicializarComportamentos(secoesData) {
     formulario.addEventListener('change', verificarCondicionais);
 
     // AJUSTE: valida no navegador as mesmas regras de contato do backend
+    // WhatsApp e e-mail são obrigatórios (atributo required vindo do JSON); aqui só o formato do WhatsApp
     function validarContato() {
-        if (!campoWhatsapp || !campoEmail) return;
+        if (!campoWhatsapp) return;
 
         const digitos = campoWhatsapp.value.replace(/\D/g, '');
         const whatsappInvalido = campoWhatsapp.value.trim() !== '' && (digitos.length < 10 || digitos.length > 15);
         campoWhatsapp.setCustomValidity(whatsappInvalido ? 'Informe um WhatsApp válido, com DDD (entre 10 e 15 dígitos).' : '');
-
-        const semContato = !campoWhatsapp.value.trim() && !campoEmail.value.trim();
-        campoEmail.setCustomValidity(semContato ? 'Informe pelo menos WhatsApp ou E-mail.' : '');
     }
 
     if (campoWhatsapp) campoWhatsapp.addEventListener('input', validarContato);
-    if (campoEmail) campoEmail.addEventListener('input', validarContato);
 
     // AJUSTE: exibição dos erros de validação devolvidos pelo backend, embaixo de cada campo
     function limparErroCampo(container) {
